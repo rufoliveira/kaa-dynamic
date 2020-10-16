@@ -166,10 +166,12 @@ class BundleTransformer:
     A value of BundleMode.OFO (1) indicates using the One-for-One transformation method.
     Otherwise, a value of BundleMode.AFO (0) indicates using the All-for-One transformation method.
     """
-    def __init__(self, model, mode):
+    def __init__(self, model, mode, strat):
         self.f = model.f
+        self.dim = model.dim
         self.vars = model.vars
         self.ofo_mode = mode
+        self.strat = strat
 
     """
     Transforms the bundle according to the dynamics governing the system. (dictated by self.f)
@@ -179,28 +181,64 @@ class BundleTransformer:
     """
     def transform(self, bund):
 
-        new_offu = np.full(bund.num_dir, np.inf)
-        new_offl = np.full(bund.num_dir, np.inf)
+        dir_vec_hash = {}
+        ptope_idx_hash = {}
+        row_counter = 0
 
-        for row_ind, row in enumerate(bund.T):
+        def optimize_over_ptopes(final_ptope_idx, dir_ptopes):
+            dir_vec, ptope_list = dir_ptopes
+            for ptope in ptope_list:
+                ub, lb = self.find_bounds(dir_vec, ptope, bund)
+                new_offu_val = min(ub, new_offu_val)
+                new_offl_val = min(lb, new_offl_val)
+
+            dir_vec_hash[dir_vec] = (new_offu, new_offl)
             
-            'Find the generator of the parallelotope.'
-            ptope = bund.getParallelotope(row_ind)
-            #print(f"Ptope {row_ind}\n")
+            if final_ptope_idx not in ptope_idx_hash:
+                ptope_idx_hash[final_ptope_idx] = []
+                
+            ptope_idx_hash[final_ptope_idx].append(dir_vec)
 
-            'Toggle iterators between OFO/AFO'
-            'Warning: assuming for now that all directions are used in defining templates.'
-            direct_iter = row.astype(int) if self.ofo_mode.value else range(bund.num_dir)
-            #print(f"Num of directions: {bund.num_dir}")
+        dir_ptopes_list = open_strat(bund)
 
-            for column in direct_iter:
-                curr_L = bund.L[column]
-                print(f"Curr_L: {curr_L}")
-                ub, lb = self.find_bounds(curr_L, ptope, bund)
+        for final_ptope_idx, dir_ptopes in enumerate(dir_ptopes_list):
 
-                new_offu[column] = min(ub, new_offu[column])
-                new_offl[column] = min(lb, new_offl[column])
+            assert len(dir_ptopes) == self.dim, "Number of Parallelotope directions must match that of system's"
+            
+            for dir_ptope_tup in dir_ptopes:
+                optimize_over_ptopes(final_ptope_idx, dir_ptope_tup)
 
+        num_dir_rows = len(dir_vec_hash)
+        num_temp_rows = len(ptope_idx_hash)
+
+        new_offu = np.full(num_dir_rows, np.inf)
+        new_offl = np.full(num_dir_rows, np.inf)
+
+        new_L = np.empty((num_dir_rows, self.dim))
+        new_T = np.empty((num_temp_rows, self.dim))
+
+        dir_vec_idx_hash = {}
+
+        for row_num, (dir_vec, offset_vals) in enumerate(dir_vec_hash.items()):
+
+            if dir_vec not in dir_vec_idx_hash:
+                dir_vec_idx_hash[dir_vec] = row_num
+
+            new_L[row_num] = dir_vec
+            new_offu[row_num] = offset_vals[0]
+            new_offl[row_num] = offset_vals[1]
+
+
+
+        for ptope_idx, dir_vecs in ptope_idx_hash.items():
+            ptope_row = []
+            for dir_vec in dir_vecs:
+                ptope_row.append(dir_vec_idx_hash[dir_vec])
+                
+            new_T[ptope_idx] = ptope_row
+
+        bund.L = new_L
+        bund.T = new_T
         bund.offu = new_offu
         bund.offl = new_offl
 

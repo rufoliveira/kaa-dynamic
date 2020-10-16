@@ -23,7 +23,7 @@ class LinStrat(TempStrategy):
     def open_strat(self, bund):
         if not self.counter % self.iter_steps:
 
-            print(f"OPEN DIR: {bund.L}")
+            #print(f"OPEN DIR: {bund.L}")
 
             approx_A = self._approx_A(bund, self.dim)
             inv_A = np.linalg.inv(approx_A)

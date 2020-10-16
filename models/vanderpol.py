@@ -9,7 +9,7 @@ class VanDerPol(Model):
 
     def __init__(self, delta=0.02):
 
-        x, y = sp.Symbol('x'), sp.Symbol('y')
+        x, y = sp.Symbol('x'), sp  .Symbol('y')
         dx = x + y*delta
         dy = y + (1*(1-x**2)*y - 2*x + x)*delta
 
@@ -39,8 +39,8 @@ class VanDerPol(Model):
         offu = np.zeros(num_dirs);
         offl = np.zeros(num_dirs);
 
-        offu[0] = 0.01; offl[0] = 0;
-        offu[1] = 2; offl[1] = -1.97;
+        offu[0] = 0.1; offl[0] = 0;
+        offu[1] = 2; offl[1] = -1.90;
         offu[2] = 10; offl[2] = 10;
         offu[3] = 10; offl[3] = 10;
 
@@ -48,10 +48,9 @@ class VanDerPol(Model):
 
 class VanDerPol_UnitBox(Model):
 
-    def __init__(self):
+    def __init__(self, delta=0.08):
 
         x, y = sp.Symbol('x'), sp.Symbol('y')
-        delta = 0.02
         dx = x + y*delta
         dy = y + (1*(1-x**2)*y - 2*x + x)*delta
 
@@ -75,8 +74,8 @@ class VanDerPol_UnitBox(Model):
         offu = np.zeros(num_dirs);
         offl = np.zeros(num_dirs);
 
-        offu[0] = 0.01; offl[0] = 0;
-        offu[1] = 2; offl[1] = -1.97;
+        offu[0] = 0.1; offl[0] = 0;
+        offu[1] = 2; offl[1] = -1.9;
         offu[2] = 10; offl[2] = 10;
         offu[3] = 10; offl[3] = 10;
 
